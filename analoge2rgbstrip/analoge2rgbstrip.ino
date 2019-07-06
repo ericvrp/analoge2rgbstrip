@@ -1,56 +1,84 @@
 #include <FastLED.h>
 
-#define LED_PIN0    7
-#define INPUT_PIN0  A0
-#define NUM_LEDS    10
+#define FALSE       0
+#define TRUE        1
+
+#define DEBUG       FALSE
+
+#define LEDSTRIP_BASE_PIN       7   // 2nd strip at base pin +1, etc.
+#define ANALOG_INPUT_BASE_PIN   A0  // 2nd strip at base pin +1, etc.
+#define N_STRIPS                4   // 4 seemed like a reasonable maximum amount (at some point)
+#define NUM_LEDS_PER_STRIP      30
+
+#define VALUE_OFFSET 10 // pretend we have measured this much more to prefend a flickering last led
 
 #define OFF         0
 #define ON          15
 
-#define DELAY       250
+#define DELAY       100
 
-CRGB    leds0[NUM_LEDS];
-int     min0 = 1023;
-int     max0 = 0;
+CRGB    leds[N_STRIPS][NUM_LEDS_PER_STRIP];
+int     min0[N_STRIPS];
+int     max0[N_STRIPS];
 
 
 void setup() {
-  Serial.begin(57200);
+#if DEBUG
+  Serial.begin(57600);
+#endif
 
-  FastLED.addLeds<WS2812, LED_PIN0, GRB>(leds0, NUM_LEDS);
+  for (int strip = 0; strip < N_STRIPS; strip++) {
+    int ledStripPin = LEDSTRIP_BASE_PIN + strip;
+
+    switch (ledStripPin) {
+      //      case 0: FastLED.addLeds<WS2812, 0, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      //      case 1: FastLED.addLeds<WS2812, 1, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      //      case 2: FastLED.addLeds<WS2812, 2, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      //      case 3: FastLED.addLeds<WS2812, 3, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      //      case 4: FastLED.addLeds<WS2812, 4, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      //      case 5: FastLED.addLeds<WS2812, 5, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      //      case 6: FastLED.addLeds<WS2812, 6, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      case 7: FastLED.addLeds<WS2812, 7, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      case 8: FastLED.addLeds<WS2812, 8, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      case 9: FastLED.addLeds<WS2812, 9, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+      case 10: FastLED.addLeds<WS2812, 10, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+        //      case 11: FastLED.addLeds<WS2812, 11, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+        //      case 12: FastLED.addLeds<WS2812, 12, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+        //      case 13: FastLED.addLeds<WS2812, 13, GRB>(leds[strip], NUM_LEDS_PER_STRIP); break;
+        // default: use at your own risc
+    }
+
+    int analogInputPin = ANALOG_INPUT_BASE_PIN + strip;
+    min0[strip] = max0[strip] = analogRead(analogInputPin);
+  }
 }
 
 void loop() {
-  int value = analogRead(INPUT_PIN0);
-  Serial.println(value);
-  
-  if (value < min0) min0 = value;
-  if (value > max0) max0 = value;
-  value = map(value, min0, max0, 1, NUM_LEDS);
+  for (int strip = 0; strip < N_STRIPS; strip++) {
+    int analogInputPin = ANALOG_INPUT_BASE_PIN + strip;
+    int value = analogRead(analogInputPin);
 
-  setUV(value);
+#if DEBUG
+    Serial.println(value);
+#endif
+
+    if (value < min0[strip]) min0[strip] = value;
+    if (value > max0[strip]) max0[strip] = value;
+    value = map(value + VALUE_OFFSET, min0[strip], max0[strip], 1, NUM_LEDS_PER_STRIP);
+
+    setLeds(strip, value);
+  } // next strip
+
   FastLED.show();
   delay(DELAY);
-
-  /*for (int i = 0; i < NUM_LEDS; i++) {
-    leds0[i] = CRGB(ON, ON, ON);
-    FastLED.show();
-    delay(DELAY);
-    }
-
-    for (int i = NUM_LEDS - 1; i >= 0; i--) {
-    leds0[i] = CRGB(OFF, OFF, OFF);
-    FastLED.show();
-    delay(DELAY);
-    }*/
 }
 
-void setUV(int nLeds) {
-  for (int i = 0; i < NUM_LEDS; i++) {
-    leds0[i] = CRGB(OFF, OFF, OFF);
+void setLeds(int strip, int nLeds) {
+  for (int i = 0; i < NUM_LEDS_PER_STRIP; i++) {
+    leds[strip][i] = CRGB(OFF, OFF, OFF);
   }
 
   for (int i = 0; i < nLeds; i++) {
-    leds0[i] = CRGB(ON, ON, ON);
+    leds[strip][i] = CRGB(ON, ON, ON);
   }
 }
